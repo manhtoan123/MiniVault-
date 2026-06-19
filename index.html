@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniVault - AES-256 GCM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; }
+        .tab-active { background-color: #1e293b; border-color: #10b981; color: #10b981; }
+        .tab-inactive { background-color: transparent; border-color: transparent; color: #94a3b8; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <div class="flex justify-center mb-2"><i data-lucide="shield-check" class="text-emerald-500 w-12 h-12"></i></div>
+        <h1 class="text-3xl font-bold tracking-tight text-white">MiniVault</h1>
+        <p class="text-slate-400 text-sm mt-2">Bảo mật Dữ liệu & Hình ảnh bằng thuật toán AES-256-GCM</p>
+    </div>
+
+    <div class="w-full max-w-2xl bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+        
+        <!-- Mật khẩu chính -->
+        <div class="p-6 border-b border-slate-700 bg-slate-800/50">
+            <label class="block text-sm font-medium text-slate-300 mb-2">🔑 Mật khẩu Master (Dùng để Mã hóa & Giải mã)</label>
+            <input type="password" id="masterPassword" placeholder="Nhập mật khẩu an toàn..." 
+                   class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
+            <p class="text-xs text-slate-500 mt-2">Mật khẩu không bao giờ được lưu lại. Sử dụng PBKDF2 phái sinh khóa chống Brute-force.</p>
+        </div>
+
+        <!-- Chuyển tab Text / Image -->
+        <div class="flex border-b border-slate-700 bg-slate-900/50">
+            <button onclick="switchCategory('text')" id="tab-text" class="flex-1 py-4 text-sm font-semibold border-b-2 tab-active transition-all flex justify-center items-center gap-2">
+                <i data-lucide="file-text" class="w-4 h-4"></i> Mã Hóa Văn Bản
+            </button>
+            <button onclick="switchCategory('image')" id="tab-image" class="flex-1 py-4 text-sm font-semibold border-b-2 tab-inactive transition-all flex justify-center items-center gap-2">
+                <i data-lucide="image" class="w-4 h-4"></i> Mã Hóa Hình Ảnh
+            </button>
+        </div>
+
+        <div class="p-6">
+            <!-- Thông báo Lỗi / Thành công -->
+            <div id="alertBox" class="hidden mb-4 p-4 rounded-lg text-sm font-medium"></div>
+
+            <!-- PHẦN TEXT -->
+            <div id="section-text" class="block space-y-4">
+                <textarea id="textContent" rows="5" placeholder="Nhập văn bản bí mật cần mã hóa..." 
+                          class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <button onclick="encryptData('text')" class="py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition-colors flex justify-center items-center gap-2">
+                        <i data-lucide="lock"></i> Mã Hóa File (.mvault)
+                    </button>
+                    <button onclick="document.getElementById('decryptTextFile').click()" class="py-3 border border-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors flex justify-center items-center gap-2">
+                        <i data-lucide="unlock"></i> Giải Mã File (.mvault)
+                    </button>
+                    <input type="file" id="decryptTextFile" class="hidden" accept=".mvault" onchange="decryptData('text', this)">
+                </div>
+            </div>
+
+            <!-- PHẦN IMAGE -->
+            <div id="section-image" class="hidden space-y-4">
+                <div class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-emerald-500 transition-colors">
+                    <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="previewImage(this)">
+                    <button onclick="document.getElementById('imageInput').click()" class="text-slate-300 font-medium flex flex-col items-center w-full">
+                        <i data-lucide="upload-cloud" class="w-10 h-10 text-slate-400 mb-2"></i>
+                        Nhấn để chọn Hình ảnh gốc
+                    </button>
+                    <img id="imgPreview" class="hidden mt-4 mx-auto max-h-48 rounded shadow-lg border border-slate-600">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <button onclick="encryptData('image')" class="py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition-colors flex justify-center items-center gap-2">
+                        <i data-lucide="lock"></i> Mã Hóa Ẩn Danh (.mvault)
+                    </button>
+                    <button onclick="document.getElementById('decryptImageFile').click()" class="py-3 border border-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors flex justify-center items-center gap-2">
+                        <i data-lucide="unlock"></i> Khôi Phục File (.mvault)
+                    </button>
+                    <input type="file" id="decryptImageFile" class="hidden" accept=".mvault" onchange="decryptData('image', this)">
+                </div>
+                
+                <!-- Kết quả giải mã ảnh -->
+                <div id="decryptedImageContainer" class="hidden mt-6 p-4 bg-slate-900 border border-emerald-500/30 rounded-xl text-center">
+                    <h3 class="text-emerald-400 font-semibold mb-3">✅ Ảnh Đã Được Giải Mã:</h3>
+                    <img id="decryptedImgPreview" class="mx-auto max-h-64 rounded shadow-lg border border-slate-600 mb-3">
+                    <p id="originalImgName" class="text-xs text-slate-400"></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
